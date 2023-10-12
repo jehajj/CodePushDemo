@@ -7,6 +7,7 @@
 
 import React from 'react';
 import {
+  Platform,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -16,6 +17,16 @@ import {
 } from 'react-native';
 
 import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
+import codePush from 'react-native-code-push';
+import Config from 'react-native-config';
+
+let codePushOptions = {
+  checkFrequency: codePush.CheckFrequency.ON_APP_RESUME,
+  ...(Platform.OS === 'ios' && {
+    deploymentKey: Config.CODE_PUSH_KEY_IOS,
+  }),
+  installMode: codePush.InstallMode.IMMEDIATE,
+};
 
 function App(): JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -38,7 +49,7 @@ function App(): JSX.Element {
           },
           styles.contentView,
         ]}>
-        <Text>CodePushDemo App</Text>
+        <Text>CodePushDemo Demo</Text>
       </View>
     </SafeAreaView>
   );
@@ -55,4 +66,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default App;
+export default codePush(codePushOptions)(App);

@@ -1,0 +1,68 @@
+platform :ios do
+   # iOS Lanes
+end
+
+platform :android do
+    desc 'Delete previous build'
+    lane :delete_old_build do
+        if(Dir.exist?('../android/app/build/outputs/apk/release'))
+            sh("cd ../android/app/build/outputs/apk/release && rm -rf app-release.apk")
+        else
+        end
+    end
+    
+    desc 'Set build version'
+    lane :set_build_version do
+        # Read and update package.json
+        sh("python3 update_package_version.py")
+
+        # Use the new version in your Android-related actions
+        json_data = JSON.parse(File.read('../package.json'))
+        new_version = json_data["version"]
+
+        android_set_version_name(
+        version_name: new_version,
+        gradle_file: "./android/app/build.gradle"
+        )
+
+        android_set_version_code(
+        version_code: 1,
+        gradle_file: "./android/app/build.gradle"
+        )
+    end
+    
+    desc 'Build the Android application'
+    lane :build do
+        delete_old_build
+        set_build_version
+        gradle(task: 'assemble', build_type: 'Release', print_command: false, project_dir: 'android/')
+    end
+    
+    desc 'Build and upload to App Center'
+    lane :upload_appcenter do
+        build
+        appcenter_upload(
+            api_token: ENV["TEST_APPCENTER_API_TOKEN_ANDROID"],
+            owner_name: ENV["TEST_APPCENTER_OWNER_NAME"],
+            app_name: ENV["APPCENTER_APP_NAME_ANDROID"],
+            apk: ENV["APPCENTER_DISTRIBUTE_APK"],
+            destinations: "Collaborators",
+            notify_testers: true,
+            release_notes: ''
+            )
+        end
+        error do |lane, exception|
+    end
+    
+    desc 'Deploy updates via Codepush'
+    lane :codepush do
+        appcenter_codepush_release_react(
+            api_token: ENV["TEST_APPCENTER_API_TOKEN_ANDROID"],
+            owner_name: ENV["TEST_APPCENTER_OWNER_NAME"],
+            app_name: ENV["APPCENTER_APP_NAME_ANDROID"],
+            deployment: "Staging"
+            )
+        end
+        error do |lane, exception|
+    end
+end
